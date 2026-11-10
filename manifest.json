@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "short_name": "GemTrin",
+  "version": "0.1.0",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "src/lang-default.js",
+        "src/i18n/base.js",
+        "src/i18n/en.js",
+        "src/i18n/pl.js",
+        "src/limits.js",
+        "src/selectors.js",
+        "src/prompts.js",
+        "src/estimate.js",
+        "src/dom.js",
+        "src/content.js"
+      ],
+      "css": [
+        "styles/panel.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gemtrin@dominpin",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "128.0"
+    }
+  }
+}

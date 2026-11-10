@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "GemTrin",
+    "description": "Extension name."
+  },
+  "extDescription": {
+    "message": "Side panel for Gemini: files and Canvas in the chat, prompt hints from Google's guidance, a context estimate. Local only.",
+    "description": "Store and extensions-page description. At most 132 characters."
+  }
+}

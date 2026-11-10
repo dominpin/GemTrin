@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'">
+<title>GemTrin unit checks</title>
+<style>
+  body { margin: 0; padding: 20px; background: #131314; color: #e3e3e3; font: 13px/1.5 ui-monospace, Consolas, monospace; }
+  h1 { font: 600 16px/1.3 system-ui, sans-serif; }
+  .ok { color: #6dd58c; }
+  .bad { color: #ff8a80; }
+  li { margin: 2px 0; }
+  pre { white-space: pre-wrap; color: #9aa0a6; margin: 2px 0 6px 18px; }
+</style>
+</head>
+<body>
+<h1 id="head">Running…</h1>
+<ul id="list"></ul>
+<script src="../src/lang-default.js"></script>
+<script src="../src/i18n/base.js"></script>
+<script src="../src/i18n/en.js"></script>
+<script src="../src/i18n/pl.js"></script>
+<script src="../src/limits.js"></script>
+<script src="../src/selectors.js"></script>
+<script src="../src/prompts.js"></script>
+<script src="../src/estimate.js"></script>
+<script src="../src/dom.js"></script>
+<script>
+'use strict';
+// Checks for the parts of GemTrin that do not need the page: the estimator,
+// the prompt checks, the file-name helpers, the texts of every language, the
+// selector chains, the manifest and the no-HTML-strings rule. Open it from a
+// local server (python -m http.server) so the file checks can fetch the sources.
+const results = [];
+const eq = (name, got, want) => results.push({ name, pass: JSON.stringify(got) === JSON.stringify(want), got, want });
+const yes = (name, cond, detail) => results.push({ name, pass: !!cond, got: detail });
+
+const E = GTR_EST, D = GTR_DOM, P = GTR_DOCS, L = GTR_LIMITS;
+
+// --- estimate.js ------------------------------------------------------------------------
+eq('textTokens(0)', E.textTokens(0), 0);
+eq('textTokens(4)', E.textTokens(4), 1);
+eq('textTokens(5)', E.textTokens(5), 2);
+eq('textTokens(400)', E.textTokens(400), 100);
+eq('tokensOfText collapses whitespace', E.tokensOfText('  a   b  \n\n c '), 2); // "a b c" = 5 chars
+eq('words', E.words('  one two\nthree  '), 3);
+eq('words of empty', E.words(''), 0);
+eq('wordsRange(1000)', E.wordsRange(1000), [600, 800]);
+eq('small image', E.imageTokens(200, 150), { tokens: 258, known: true });
+eq('image at the 384 px edge', E.imageTokens(384, 384), { tokens: 258, known: true });
+eq('image just over 384 px: one tile', E.imageTokens(385, 100), { tokens: 258, known: true });
+eq('1024 × 1024: four tiles', E.imageTokens(1024, 1024), { tokens: 1032, known: true });
+eq('1920 × 1080: six tiles', E.imageTokens(1920, 1080), { tokens: 1548, known: true });
+eq('unknown size: one tile, lower bound', E.imageTokens(0, 0), { tokens: 258, known: false });
+eq('fmtTokens 950', E.fmtTokens(950), '950');
+eq('fmtTokens 18234', E.fmtTokens(18234), '18.2k');
+eq('fmtTokens 18234 with a decimal comma', E.fmtTokens(18234, ','), '18,2k');
+eq('fmtTokens 10000', E.fmtTokens(10000), '10k');
+eq('fmtTokens 32000', E.fmtTokens(32000), '32k');
+eq('fmtTokens 128000', E.fmtTokens(128000), '128k');
+eq('fmtTokens 999999', E.fmtTokens(999999), '1M');
+eq('fmtTokens 1000000', E.fmtTokens(1000000), '1M');
+eq('fmtTokens 1048576', E.fmtTokens(1048576), '1.05M');
+eq('fmtPct below 1', E.fmtPct(0.4), '<1%');
+eq('fmtPct 0', E.fmtPct(0), '0%');
+eq('fmtPct 57.4', E.fmtPct(57.4), '57%');
+eq('usage tone: 10 of 32k', E.usage(10, 32000).tone, 'success');
+eq('usage tone: half', E.usage(16000, 32000).tone, 'warning');
+eq('usage tone: 80%', E.usage(25600, 32000).tone, 'danger');
+eq('plan pro', E.plan('pro').tokens, 1000000);
+eq('plan plus', E.plan('plus').tokens, 128000);
+eq('unknown plan falls back to the default', E.plan('nope').id, L.defaultPlan);
+eq('summarize', E.summarize({ userChars: 40, modelChars: 400, images: [{ tokens: 258 }, { tokens: 1032 }], otherFiles: 2, nUser: 1, nModel: 1 }),
+  { user: 10, model: 100, text: 110, images: 1290, nImages: 2, otherFiles: 2, nUser: 1, nModel: 1, chars: 440, total: 1400 });
+eq('summarize empty', E.summarize().total, 0);
+
+// --- limits.js --------------------------------------------------------------------------
+eq('plan windows (Help Center)', L.plans.map(p => [p.id, p.tokens]), [['free', 32000], ['plus', 128000], ['pro', 1000000], ['ultra', 1000000]]);
+eq('chars per token (Google)', L.text.charsPerToken, 4);
+eq('API budgets', [L.api.inputTokens, L.api.outputTokens], [1048576, 65536]);
+
+// --- dom.js: file names ---------------------------------------------------------------------
+eq('cleanPath plain file', D.cleanPath('config.json'), 'config.json');
+eq('cleanPath backslashes and line numbers', D.cleanPath('src\\app.ts:12:4'), 'src/app.ts');
+eq('cleanPath object.Property', D.cleanPath('object.Property'), null);
+eq('cleanPath version', D.cleanPath('v2.1.3'), null);
+eq('cleanPath domain', D.cleanPath('example.com'), null);
+eq('cleanPath .pl domain', D.cleanPath('onet.pl'), null);
+eq('cleanPath URL', D.cleanPath('https://x.com/a.js'), null);
+eq('cleanPath e-mail', D.cleanPath('user@example.com'), null);
+eq('cleanPath folder (loose)', D.cleanPath('src/app', true), 'src/app');
+eq('cleanPath folder (strict)', D.cleanPath('src/app', false), null);
+eq('fileFromCode "// file: src/app.ts"', D.fileFromCode('// file: src/app.ts\nexport const a = 1;'), 'src/app.ts');
+eq('fileFromCode "# lib/format.py"', D.fileFromCode('# lib/format.py\ndef f(): pass'), 'lib/format.py');
+eq('fileFromCode HTML comment', D.fileFromCode('<!-- index.html -->\n<!doctype html>'), 'index.html');
+eq('fileFromCode CSS comment', D.fileFromCode('/* styles.css */\nbody{}'), 'styles.css');
+eq('fileFromCode SQL comment', D.fileFromCode('-- schema.sql\ncreate table t();'), 'schema.sql');
+eq('fileFromCode after a shebang', D.fileFromCode('#!/usr/bin/env python\n# tools/run.py\nprint(1)'), 'tools/run.py');
+eq('fileFromCode "#include <stdio.h>"', D.fileFromCode('#include <stdio.h>\nint main(){}'), null);
+eq('fileFromCode "import os"', D.fileFromCode('import os\nprint(os.name)'), null);
+eq('fileFromCode "// v2.1.3"', D.fileFromCode('// v2.1.3\nconst x = 1;'), null);
+eq('fileFromCode "# Python script"', D.fileFromCode('# Python script\nprint(1)'), null);
+eq('fileFromCode a sentence in a comment', D.fileFromCode('// Simple helper.js wrapper\nexport {}'), null);
+eq('fileFromText line ending in a colon', D.fileFromText('Here is the updated config.json:'), 'config.json');
+eq('fileFromText name in code', D.fileFromText('Put this in utils/dates.py and import it', { codes: ['utils/dates.py'] }), 'utils/dates.py');
+eq('fileFromText heading', D.fileFromText('Step 2 – the server in server/main.go, with notes', { heading: true }), 'server/main.go');
+eq('fileFromText long prose is not a file name', D.fileFromText('This replaces the old config.json approach, which loaded every setting at start-up and kept them in memory'), null);
+eq('fileFromText words with dots', D.fileFromText('Using object.Property and v2.1.3:'), null);
+
+// --- prompts.js -------------------------------------------------------------------------------
+function states(text, attachments = 0) {
+  const raw = text;
+  const t = P.normalize(raw);
+  const c = { attachments, words: E.words(raw), chars: E.collapse(raw).length };
+  return Object.fromEntries(P.patterns.map(p => {
+    const s = t.trim() ? p.test(t, c) : false;
+    return [p.id, s === null ? 'na' : s ? 'ok' : 'miss'];
+  }));
+}
+const pick = (o, keys) => Object.fromEntries(keys.map(k => [k, o[k]]));
+eq('pattern ids', P.patterns.map(p => p.id), ['persona', 'task', 'context', 'format', 'constraints', 'examples', 'delimiters', 'questionLast', 'depth']);
+eq('English draft', states('You are a senior data analyst. Summarize the attached report for our board meeting because they only have 5 minutes. Use a table with 3 columns and at most 5 rows. For example: | Metric | Q3 | Change |'),
+  { persona: 'ok', task: 'ok', context: 'ok', format: 'ok', constraints: 'ok', examples: 'ok', delimiters: 'miss', questionLast: 'na', depth: 'miss' });
+eq('Polish draft (diacritics stripped)', pick(states('Jesteś doświadczonym analitykiem. Przygotuj podsumowanie raportu dla zarządu, bo mają tylko 5 minut. Odpowiedz tabelą, nie więcej niż 5 wierszy. Na przykład: | Wskaźnik | Q3 |'), ['persona', 'task', 'context', 'format', 'constraints', 'examples']),
+  { persona: 'ok', task: 'ok', context: 'ok', format: 'ok', constraints: 'ok', examples: 'ok' });
+eq('a vague one-liner misses everything', states('make it better'),
+  { persona: 'miss', task: 'miss', context: 'miss', format: 'miss', constraints: 'miss', examples: 'miss', delimiters: 'miss', questionLast: 'na', depth: 'miss' });
+const doc = 'The report covers revenue, hiring, churn and the roadmap in some detail. '.repeat(20);
+eq('long draft, question last', pick(states(`<document>\n${doc}\n</document>\n\nBased on the information above, what are the risks?`), ['delimiters', 'questionLast']), { delimiters: 'ok', questionLast: 'ok' });
+eq('long draft, question first', states(`What are the risks in this report?\n\n${doc}`).questionLast, 'miss');
+eq('XML and Markdown mixed is not one style', states('## Task\n<context>data</context>').delimiters, 'miss');
+eq('Markdown headings alone', states('## Task\nSummarize it\n## Context\nA report').delimiters, 'ok');
+eq('an attached file is context', states('Make it shorter please and add more numbers to it', 1).context, 'ok');
+eq('"as a table" is not a persona', states('Show the results as a table with two columns please').persona, 'miss');
+eq('"as a teacher" is a persona', states('Explain photosynthesis as a teacher would to ten year olds').persona, 'ok');
+eq('Polish persona "jako ekspert"', states('Jako ekspert od podatków wyjaśnij mi ulgę na dzieci').persona, 'ok');
+
+// Every language's examples satisfy their own check, and every starter is there.
+for (const lang of Object.keys(GTR_I18N)) {
+  const tx = GTR_I18N[lang];
+  for (const p of P.patterns) {
+    const entry = tx.patterns[p.id];
+    yes(`${lang}: pattern ${p.id} has label, hint, example`, Array.isArray(entry) && entry.length === 3 && entry.every(s => typeof s === 'string' && s.length));
+    if (!entry) continue;
+    const sample = p.id === 'questionLast' ? `${doc}\n\n${entry[2]}what are the risks?` : entry[2];
+    const raw = sample;
+    const c = { attachments: 0, words: E.words(raw), chars: E.collapse(raw).length };
+    yes(`${lang}: the example for ${p.id} passes its own check`, p.test(P.normalize(raw), c) === true, entry[2]);
+  }
+  for (const id of P.starters) yes(`${lang}: starter ${id}`, Array.isArray(tx.starters[id]) && tx.starters[id].length === 2);
+  yes(`${lang}: principles`, Array.isArray(tx.principles) && tx.principles.length >= 6);
+  yes(`${lang}: language name`, typeof GTR_LANG_NAMES[lang] === 'string');
+}
+
+// Every key of English exists in every language, with the same kind of value.
+const kind = v => (typeof v === 'function' ? 'function' : Array.isArray(v) ? 'array' : typeof v);
+for (const lang of Object.keys(GTR_I18N)) {
+  if (lang === 'en') continue;
+  const missing = Object.keys(GTR_I18N.en).filter(k => kind(GTR_I18N[lang][k]) !== kind(GTR_I18N.en[k]));
+  yes(`${lang}: has every English key`, missing.length === 0, missing);
+  const extra = Object.keys(GTR_I18N[lang]).filter(k => !(k in GTR_I18N.en));
+  yes(`${lang}: no keys English lacks`, extra.length === 0, extra);
+}
+// Polish plurals.
+eq('pl count 1/2/5/12/22', [1, 2, 5, 12, 22].map(n => GTR_I18N.pl.count(n)), ['1 element', '2 elementy', '5 elementów', '12 elementów', '22 elementy']);
+
+// --- selectors.js -----------------------------------------------------------------------------
+const bad = [];
+for (const [concept, list] of Object.entries(GTR_SEL)) {
+  for (const sel of list) { try { document.createDocumentFragment().querySelector(sel); } catch { bad.push(`${concept}: ${sel}`); } }
+}
+yes('every selector parses', bad.length === 0, bad);
+yes('every chain is a non-empty list', Object.values(GTR_SEL).every(v => Array.isArray(v) && v.length));
+
+// --- files: manifest, locales, the no-HTML-strings rule ---------------------------------------
+(async () => {
+  if (location.protocol.startsWith('http')) {
+    try {
+      const manifest = await (await fetch('../manifest.json')).json();
+      eq('manifest_version', manifest.manifest_version, 3);
+      eq('no permissions requested', [manifest.permissions, manifest.host_permissions, manifest.optional_permissions], [undefined, undefined, undefined]);
+      eq('runs on gemini.google.com only', manifest.content_scripts[0].matches, ['https://gemini.google.com/*']);
+      eq('gecko id', manifest.browser_specific_settings.gecko.id, 'gemtrin@dominpin');
+      const scripts = manifest.content_scripts[0].js;
+      const order = ['src/lang-default.js', 'src/i18n/base.js', 'src/i18n/en.js', 'src/i18n/pl.js', 'src/limits.js', 'src/selectors.js', 'src/prompts.js', 'src/estimate.js', 'src/dom.js', 'src/content.js'];
+      eq('script order', scripts, order);
+      const files = [...scripts, ...manifest.content_scripts[0].css, ...Object.values(manifest.icons), '_locales/en/messages.json', '_locales/pl/messages.json'];
+      for (const f of files) {
+        const r = await fetch('../' + f);
+        yes(`exists: ${f}`, r.ok, r.status);
+      }
+      for (const loc of ['en', 'pl']) {
+        const m = await (await fetch(`../_locales/${loc}/messages.json`)).json();
+        yes(`${loc}: extName and extDescription`, m.extName && m.extDescription);
+        yes(`${loc}: description within 132 characters`, m.extDescription.message.length <= 132, m.extDescription.message.length);
+      }
+      const banned = /\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML|document\.write\(|\beval\(|new Function\(/;
+      for (const f of [...scripts, 'test/harness.html']) {
+        const text = await (await fetch('../' + f)).text();
+        // The comments in this file name the banned calls, so only code lines count.
+        const hits = text.split('\n').filter(l => banned.test(l) && !/^\s*\/\//.test(l));
+        yes(`no HTML strings or eval in ${f}`, hits.length === 0, hits);
+      }
+    } catch (err) {
+      yes('file checks', false, String(err));
+    }
+  } else {
+    yes('file checks need http:// (python -m http.server)', false, location.protocol);
+  }
+
+  const list = document.getElementById('list');
+  for (const r of results) {
+    const li = document.createElement('li');
+    li.className = r.pass ? 'ok' : 'bad';
+    li.textContent = (r.pass ? '✓ ' : '✗ ') + r.name;
+    list.appendChild(li);
+    if (!r.pass) {
+      const pre = document.createElement('pre');
+      pre.textContent = 'got ' + JSON.stringify(r.got) + (r.want !== undefined ? '\nwant ' + JSON.stringify(r.want) : '');
+      list.appendChild(pre);
+    }
+  }
+  const failed = results.filter(r => !r.pass);
+  window.gtrUnit = { passed: results.length - failed.length, failed: failed.length, failures: failed };
+  const head = document.getElementById('head');
+  head.textContent = failed.length ? `${failed.length} of ${results.length} checks failed` : `All ${results.length} checks passed`;
+  head.className = failed.length ? 'bad' : 'ok';
+  document.title = failed.length ? `GTR UNIT FAIL ${failed.length}/${results.length}` : `GTR UNIT PASS ${results.length}`;
+  head.setAttribute('data-done', '1');
+})();
+</script>
+</body>
+</html>

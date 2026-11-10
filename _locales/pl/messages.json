@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "GemTrin",
+    "description": "Nazwa rozszerzenia."
+  },
+  "extDescription": {
+    "message": "Panel boczny do Gemini: pliki i Canvas z rozmowy, podpowiedzi do promptów wg Google, szacunek kontekstu. Działa lokalnie.",
+    "description": "Opis w sklepie i na stronie rozszerzeń. Najwyżej 132 znaki."
+  }
+}

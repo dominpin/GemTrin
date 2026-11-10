@@ -1,0 +1,542 @@
+/* GemTrin. Everything is scoped under #gtr-root so the page's own styles and
+   this file stay out of each other's way. The tone colours (--gtr-accent and
+   friends) are set from content.js for the light or dark page; the surface
+   colours below follow the same switch through data-theme. */
+
+#gtr-root {
+  --gtr-w: 310px;
+  --gtr-bg: #1e1f20;
+  --gtr-fg: #e3e3e3;
+  --gtr-line: #3c4043;
+  --gtr-row: rgba(255, 255, 255, 0.05);
+  --gtr-accent: #c58af9;
+  --gtr-success: #6dd58c;
+  --gtr-warning: #ffd15c;
+  --gtr-danger: #ff8a80;
+  --gtr-info: #7cacf8;
+  --gtr-muted: #9aa0a6;
+  position: fixed;
+  inset: 0 0 auto auto;
+  /* Below Angular Material overlays (1000), so Gemini's menus and dialogs
+     open on top of the panel rather than under it. */
+  z-index: 990;
+  font-family: "Google Sans Text", "Google Sans", Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--gtr-fg);
+  text-align: left;
+}
+
+#gtr-root[data-theme="light"] {
+  --gtr-bg: #f8fafd;
+  --gtr-fg: #1f1f1f;
+  --gtr-line: #dde3ea;
+  --gtr-row: rgba(0, 0, 0, 0.045);
+}
+
+#gtr-root *,
+#gtr-root *::before,
+#gtr-root *::after { box-sizing: border-box; }
+
+#gtr-root [hidden] { display: none !important; }
+
+#gtr-root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+#gtr-root p, #gtr-root ul, #gtr-root h4 { margin: 0; padding: 0; }
+#gtr-root a { color: var(--gtr-info); text-decoration: underline; text-underline-offset: 2px; }
+#gtr-root code {
+  font-family: ui-monospace, "Roboto Mono", Consolas, monospace;
+  font-size: 10.5px;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+#gtr-root :focus-visible {
+  outline: 2px solid var(--gtr-info);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* The folded handle on the edge of the window, with the usage tone as a dot. */
+#gtr-root .gtr-tab {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: var(--gtr-bg);
+  border: 1px solid var(--gtr-line);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  color: var(--gtr-info);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+#gtr-root .gtr-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gtr-success);
+}
+#gtr-root .gtr-tab[data-tone="warning"] .gtr-tab-dot { background: var(--gtr-warning); }
+#gtr-root .gtr-tab[data-tone="danger"] .gtr-tab-dot { background: var(--gtr-danger); }
+#gtr-root[data-collapsed="1"] .gtr-tab { display: flex; }
+#gtr-root[data-collapsed="1"] .gtr-panel { display: none; }
+
+/* Below Gemini's top bar, so the account menu stays reachable. */
+#gtr-root .gtr-panel {
+  position: fixed;
+  top: 72px;
+  right: 12px;
+  bottom: 16px;
+  width: var(--gtr-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--gtr-bg);
+  border: 1px solid var(--gtr-line);
+  border-radius: 14px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+
+#gtr-root .gtr-grip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 1;
+}
+#gtr-root .gtr-grip:hover { background: var(--gtr-info); opacity: 0.5; }
+
+/* The meter: estimated tokens against the plan's window. */
+#gtr-root .gtr-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--gtr-line);
+  cursor: pointer;
+}
+#gtr-root .gtr-meter:hover { background: var(--gtr-row); }
+#gtr-root .gtr-dot[data-tone="success"] { color: var(--gtr-success); }
+#gtr-root .gtr-dot[data-tone="warning"] { color: var(--gtr-warning); }
+#gtr-root .gtr-dot[data-tone="danger"] { color: var(--gtr-danger); }
+#gtr-root .gtr-m-main { font-weight: 600; font-variant-numeric: tabular-nums; }
+#gtr-root .gtr-m-sub { color: var(--gtr-muted); font-size: 11.5px; }
+#gtr-root .gtr-x {
+  margin-left: auto;
+  align-self: center;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.6;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+#gtr-root .gtr-x:hover { opacity: 1; background: var(--gtr-row); }
+
+#gtr-root .gtr-usage,
+#gtr-root .gtr-bar {
+  flex: 0 0 100%;
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--gtr-row);
+  overflow: hidden;
+}
+#gtr-root .gtr-usage-fill,
+#gtr-root .gtr-bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: var(--gtr-success);
+  transition: width 0.3s;
+}
+#gtr-root [data-tone="warning"].gtr-usage-fill,
+#gtr-root [data-tone="warning"].gtr-bar-fill { background: var(--gtr-warning); }
+#gtr-root [data-tone="danger"].gtr-usage-fill,
+#gtr-root [data-tone="danger"].gtr-bar-fill { background: var(--gtr-danger); }
+
+/* The task-list bar from groundtron-side-tree: inset track, glossy green
+   fill, a glow that sweeps while it runs. */
+#gtr-root .gtr-prog {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+#gtr-root .gtr-prog-track {
+  flex: 1;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--gtr-line);
+  background: var(--gtr-row);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+#gtr-root .gtr-prog-fill {
+  position: relative;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0) 50%),
+    linear-gradient(to bottom, #6fe56f 0%, #2fbf2f 50%, #1fa81f 50%, #48cf48 100%);
+  border-right: 1px solid #0d6b0d;
+  transition: width 0.3s;
+}
+#gtr-root .gtr-prog[data-done="0"] .gtr-prog-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+  animation: gtr-sweep 2s linear infinite;
+}
+#gtr-root .gtr-prog[data-done="1"] .gtr-prog-fill { border-right-color: transparent; }
+@keyframes gtr-sweep { from { transform: translateX(-60px); } to { transform: translateX(420px); } }
+
+/* Tabs, with the blue-to-violet line under the open one. */
+#gtr-root .gtr-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--gtr-line);
+}
+#gtr-root .gtr-tabbtn {
+  padding: 5px 9px 6px;
+  border-radius: 8px 8px 0 0;
+  color: var(--gtr-muted);
+  white-space: nowrap;
+  position: relative;
+}
+#gtr-root .gtr-tabbtn:hover { color: var(--gtr-fg); }
+#gtr-root .gtr-tabbtn.gtr-on { color: var(--gtr-fg); background: var(--gtr-row); }
+#gtr-root .gtr-tabbtn.gtr-on::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gtr-info), var(--gtr-accent));
+}
+#gtr-root .gtr-lang {
+  margin: 0 0 5px auto;
+  align-self: center;
+  max-width: 96px;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--gtr-muted);
+  background: var(--gtr-row);
+  border: 1px solid var(--gtr-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+#gtr-root .gtr-lang option { color: #1f1f1f; background: #fff; }
+
+#gtr-root .gtr-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 8px 16px;
+}
+
+/* Files ---------------------------------------------------------------------- */
+
+#gtr-root .gtr-opts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 6px;
+}
+#gtr-root .gtr-opt {
+  padding: 2px 8px;
+  border: 1px solid var(--gtr-line);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--gtr-muted);
+  white-space: nowrap;
+}
+#gtr-root .gtr-opt:hover { color: var(--gtr-fg); }
+#gtr-root .gtr-opt.gtr-on {
+  color: var(--gtr-bg);
+  background: var(--gtr-info);
+  border-color: var(--gtr-info);
+}
+#gtr-root .gtr-count { margin-left: auto; font-size: 11px; color: var(--gtr-muted); white-space: nowrap; }
+#gtr-root .gtr-empty { margin: 10px 6px; color: var(--gtr-muted); }
+
+#gtr-root .gtr-title-line {
+  padding: 0 6px 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#gtr-root .gtr-root-line {
+  padding-top: 1px;
+  padding-bottom: 3px;
+  color: var(--gtr-muted);
+  font-size: 11px;
+  direction: rtl;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#gtr-root .gtr-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-right: 6px;
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+  white-space: nowrap;
+}
+#gtr-root .gtr-row:hover { background: var(--gtr-row); }
+#gtr-root .gtr-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#gtr-root .gtr-dir { color: var(--gtr-muted); }
+#gtr-root .gtr-dir .gtr-name { font-weight: 500; }
+#gtr-root .gtr-fold { padding: 0 3px; margin: 0 -3px; border-radius: 3px; }
+#gtr-root .gtr-fold:hover { color: var(--gtr-fg); background: var(--gtr-row); }
+#gtr-root .gtr-glyph { width: 1.2em; text-align: center; flex: 0 0 auto; font-size: 11.5px; }
+#gtr-root .gtr-badge {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--gtr-muted);
+  font-variant-numeric: tabular-nums;
+}
+#gtr-root .gtr-file { cursor: pointer; }
+
+#gtr-root .gtr-file[data-kind="upload"] .gtr-glyph { color: var(--gtr-info); }
+#gtr-root .gtr-file[data-kind="write"] .gtr-glyph { color: var(--gtr-success); }
+#gtr-root .gtr-file[data-kind="edit"] .gtr-glyph { color: var(--gtr-accent); }
+#gtr-root .gtr-file[data-kind="image"] .gtr-glyph { color: var(--gtr-warning); }
+#gtr-root .gtr-file[data-kind="snippet"] { color: var(--gtr-muted); }
+#gtr-root .gtr-file[data-kind="snippet"] .gtr-glyph { color: var(--gtr-muted); font-size: 10px; }
+
+#gtr-root .gtr-recent[data-kind="upload"] { border-left-color: var(--gtr-info); }
+#gtr-root .gtr-recent[data-kind="write"] { border-left-color: var(--gtr-success); }
+#gtr-root .gtr-recent[data-kind="edit"] { border-left-color: var(--gtr-accent); }
+#gtr-root .gtr-recent[data-kind="image"] { border-left-color: var(--gtr-warning); }
+#gtr-root .gtr-recent[data-kind="snippet"] { border-left-color: var(--gtr-muted); }
+
+/* The flash when Gemini just added or changed an item. */
+#gtr-root .gtr-flash { animation: gtr-flash 1.6s ease-out 1; }
+#gtr-root .gtr-flash[data-kind="upload"] { --gtr-flash-c: var(--gtr-info); }
+#gtr-root .gtr-flash[data-kind="write"] { --gtr-flash-c: var(--gtr-success); }
+#gtr-root .gtr-flash[data-kind="edit"] { --gtr-flash-c: var(--gtr-accent); }
+#gtr-root .gtr-flash[data-kind="image"] { --gtr-flash-c: var(--gtr-warning); }
+@keyframes gtr-flash {
+  0% { background: var(--gtr-flash-c, var(--gtr-info)); color: var(--gtr-bg); }
+  35% { background: color-mix(in srgb, var(--gtr-flash-c, var(--gtr-info)) 35%, transparent); }
+  100% { background: transparent; }
+}
+
+/* A row scrolls the page to its item, which blinks. This one is on the page,
+   outside #gtr-root, so it carries its own colour. */
+.gtr-jump { animation: gtr-jump 2s ease-out; border-radius: 6px; }
+@keyframes gtr-jump {
+  0%, 60% { box-shadow: 0 0 0 3px rgba(124, 172, 248, 0.55); background-color: rgba(124, 172, 248, 0.18); }
+  100% { box-shadow: 0 0 0 3px transparent; background-color: transparent; }
+}
+
+/* Hints ---------------------------------------------------------------------- */
+
+#gtr-root .gtr-lead { margin: 4px 6px 4px; font-size: 12px; }
+#gtr-root .gtr-words {
+  margin: 0 6px 8px;
+  font-size: 11px;
+  color: var(--gtr-muted);
+  font-variant-numeric: tabular-nums;
+}
+#gtr-root .gtr-checks { padding: 0 2px 4px; }
+#gtr-root .gtr-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--gtr-muted);
+}
+#gtr-root .gtr-check:hover { background: var(--gtr-row); }
+#gtr-root .gtr-tick { font-size: 11px; line-height: 1.6; flex: 0 0 auto; width: 1em; text-align: center; }
+#gtr-root .gtr-check-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#gtr-root .gtr-check-label { color: var(--gtr-fg); font-weight: 600; }
+#gtr-root .gtr-check-hint { font-size: 11px; line-height: 1.4; white-space: normal; }
+#gtr-root .gtr-check[data-done] .gtr-check-label::after { content: " " attr(data-done); color: var(--gtr-success); font-weight: 400; font-size: 11px; }
+/* A row the draft already satisfies shrinks to its label: nothing left to explain. */
+#gtr-root .gtr-check.gtr-ok { cursor: default; }
+#gtr-root .gtr-check.gtr-ok:hover { background: none; }
+#gtr-root .gtr-check.gtr-ok .gtr-tick { color: var(--gtr-success); }
+#gtr-root .gtr-check.gtr-ok .gtr-check-hint,
+#gtr-root .gtr-check.gtr-na .gtr-check-hint { display: none; }
+#gtr-root .gtr-check.gtr-ok .gtr-check-label { font-weight: 400; color: var(--gtr-muted); }
+#gtr-root .gtr-check.gtr-na { opacity: 0.6; }
+#gtr-root .gtr-check.gtr-na .gtr-check-label { font-weight: 400; color: var(--gtr-muted); }
+
+#gtr-root .gtr-note { margin: 2px 6px 10px; font-size: 11px; color: var(--gtr-muted); }
+
+#gtr-root h4 {
+  margin: 12px 6px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gtr-muted);
+}
+#gtr-root .gtr-body > h4:first-child { margin-top: 4px; }
+
+#gtr-root .gtr-starter {
+  display: block;
+  width: 100%;
+  padding: 6px 9px;
+  margin-bottom: 4px;
+  border: 1px solid var(--gtr-line);
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#gtr-root .gtr-starter:hover { border-color: var(--gtr-info); }
+#gtr-root .gtr-starter[data-done]::after { content: " " attr(data-done); color: var(--gtr-success); font-size: 11px; }
+
+#gtr-root details { margin: 12px 6px 6px; font-size: 12px; }
+#gtr-root summary {
+  cursor: pointer;
+  color: var(--gtr-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+#gtr-root .gtr-principle { padding: 4px 0; color: var(--gtr-muted); }
+#gtr-root .gtr-principle b { color: var(--gtr-fg); font-weight: 600; }
+#gtr-root .gtr-sources { margin-top: 8px; font-size: 11px; color: var(--gtr-muted); }
+
+/* Context ---------------------------------------------------------------------- */
+
+#gtr-root .gtr-plans {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 0 4px 6px;
+}
+#gtr-root .gtr-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 2px;
+  border: 1px solid var(--gtr-line);
+  border-radius: 8px;
+  text-align: center;
+  min-width: 0;
+}
+#gtr-root .gtr-plan:hover { border-color: var(--gtr-info); }
+#gtr-root .gtr-plan.gtr-on { border-color: var(--gtr-info); background: color-mix(in srgb, var(--gtr-info) 16%, transparent); }
+#gtr-root .gtr-plan-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+#gtr-root .gtr-plan-tok { font-size: 11px; color: var(--gtr-muted); font-variant-numeric: tabular-nums; }
+
+#gtr-root .gtr-big { display: flex; align-items: baseline; gap: 8px; margin: 10px 6px 0; flex-wrap: wrap; }
+#gtr-root .gtr-big-num { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#gtr-root .gtr-big-num[data-tone="warning"] { color: var(--gtr-warning); }
+#gtr-root .gtr-big-num[data-tone="danger"] { color: var(--gtr-danger); }
+#gtr-root .gtr-big-of { color: var(--gtr-muted); }
+#gtr-root .gtr-bar { height: 6px; margin: 6px 6px 8px; }
+#gtr-root .gtr-tip {
+  margin: 4px 6px 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--gtr-warning);
+  border-radius: 4px;
+  background: var(--gtr-row);
+  font-size: 11.5px;
+}
+#gtr-root .gtr-tip[data-tone="danger"] { border-left-color: var(--gtr-danger); }
+
+#gtr-root .gtr-lines { margin: 0 4px 6px; }
+#gtr-root .gtr-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 6px;
+}
+#gtr-root .gtr-line[role="button"] { cursor: pointer; }
+#gtr-root .gtr-line[role="button"]:hover { background: var(--gtr-row); }
+#gtr-root .gtr-line-label { color: var(--gtr-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#gtr-root .gtr-line-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+#gtr-root .gtr-line.gtr-strong { border-top: 1px solid var(--gtr-line); border-radius: 0; margin-top: 2px; padding-top: 5px; }
+#gtr-root .gtr-line.gtr-strong .gtr-line-label,
+#gtr-root .gtr-line.gtr-strong .gtr-line-value { color: var(--gtr-fg); font-weight: 600; }
+
+#gtr-root .gtr-notes { margin: 6px 6px 4px 20px; color: var(--gtr-muted); font-size: 11px; }
+#gtr-root .gtr-notes li { margin-bottom: 3px; }
+
+#gtr-root .gtr-hrow { display: flex; align-items: baseline; gap: 6px; padding: 2px 0; }
+#gtr-root .gtr-hmark { width: 1em; text-align: center; flex: 0 0 auto; }
+#gtr-root .gtr-hrow[data-ok="1"] .gtr-hmark { color: var(--gtr-success); }
+#gtr-root .gtr-hrow[data-ok="0"] { color: var(--gtr-muted); }
+#gtr-root .gtr-hname { flex: 0 0 auto; }
+#gtr-root .gtr-hsel { margin-left: auto; color: var(--gtr-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#gtr-root .gtr-ref p { margin: 6px 0; color: var(--gtr-muted); font-size: 11.5px; }
+
+/* Phones and other narrow windows: the panel takes the width of the screen,
+   touch targets grow and there is no edge to drag. It starts folded to its
+   handle; see `narrow` in content.js. */
+@media (max-width: 700px) {
+  #gtr-root { font-size: 14px; }
+  #gtr-root .gtr-panel {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: max(8px, env(safe-area-inset-left));
+    width: auto;
+  }
+  #gtr-root .gtr-grip { display: none; }
+  #gtr-root .gtr-tab { padding: 16px 10px; font-size: 18px; }
+  #gtr-root .gtr-x { font-size: 24px; min-width: 40px; min-height: 40px; opacity: 0.9; }
+  #gtr-root .gtr-tabbtn { padding: 10px 12px; }
+  #gtr-root .gtr-lang { padding: 8px 6px; font-size: 13px; max-width: 120px; }
+  #gtr-root .gtr-opt { padding: 8px 12px; }
+  #gtr-root .gtr-row { min-height: 40px; }
+  #gtr-root .gtr-fold { padding: 8px 12px; margin: -8px -4px -8px -12px; }
+  #gtr-root .gtr-check, #gtr-root .gtr-starter, #gtr-root .gtr-plan { padding-top: 10px; padding-bottom: 10px; }
+  #gtr-root .gtr-plan-name, #gtr-root .gtr-plan-tok { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #gtr-root .gtr-flash { animation: none; background: var(--gtr-row); }
+  #gtr-root .gtr-prog-fill::after { animation: none; opacity: 0; }
+  #gtr-root .gtr-usage-fill, #gtr-root .gtr-bar-fill, #gtr-root .gtr-prog-fill { transition: none; }
+  .gtr-jump { animation: none; outline: 3px solid rgba(124, 172, 248, 0.7); }
+}

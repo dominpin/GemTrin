@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Trusted Types on, as on Google's own pages: any innerHTML in the extension throws here. -->
+<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'">
+<title>Quarterly review - Google Gemini</title>
+<link rel="stylesheet" href="../styles/panel.css">
+<style>
+  body { margin: 0; background: #131314; color: #e3e3e3; font: 14px/1.55 "Google Sans Text", Roboto, "Segoe UI", sans-serif; }
+  body.light-theme { background: #ffffff; color: #1f1f1f; }
+  .topbar { height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid #2a2b2e; box-sizing: border-box; }
+  .topbar b { font-size: 18px; }
+  .topbar a { color: #7cacf8; }
+  chat-window { display: block; position: fixed; top: 64px; left: 0; right: 0; bottom: 170px; overflow: auto; padding: 16px 350px 16px 24px; }
+  infinite-scroller { display: block; max-width: 720px; }
+  .conversation-container { display: flex; flex-direction: column; }
+  user-query { display: block; align-self: flex-end; max-width: 80%; margin: 16px 0 8px; background: #2a2b2e; border-radius: 18px; padding: 10px 14px; }
+  body.light-theme user-query { background: #e9eef6; }
+  .query-text-line { margin: 0; }
+  model-response { display: block; margin: 8px 0 20px; }
+  .cdk-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  model-thoughts { display: block; color: #9aa0a6; font-size: 12px; margin-bottom: 4px; }
+  model-thoughts .thoughts-body { display: none; }
+  model-thoughts button, .response-footer button { font: inherit; color: inherit; background: none; border: 1px solid #444; border-radius: 8px; padding: 2px 8px; }
+  code-block { display: block; border: 1px solid #3c4043; border-radius: 10px; margin: 8px 0; overflow: hidden; }
+  .code-block-decoration { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: #1e1f20; font-size: 12px; }
+  body.light-theme .code-block-decoration { background: #f0f4f9; }
+  .code-block-decoration button { font: inherit; font-size: 11px; color: inherit; background: none; border: 0; }
+  pre { margin: 0; padding: 10px; overflow: auto; font: 12.5px/1.5 ui-monospace, Consolas, monospace; }
+  .file-preview-container { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  uploader-file-preview { display: inline-flex; gap: 6px; align-items: center; border: 1px solid #444; border-radius: 10px; padding: 4px 8px; font-size: 12px; }
+  uploader-file-preview img { border-radius: 6px; }
+  immersive-entry-chip { display: block; margin: 8px 0; }
+  immersive-entry-chip button { font: inherit; color: inherit; background: #1e1f20; border: 1px solid #3c4043; border-radius: 12px; padding: 8px 14px; cursor: pointer; }
+  generated-image img { display: block; border-radius: 12px; margin: 8px 0; }
+  input-area-v2 { position: fixed; left: 24px; right: 350px; bottom: 56px; max-width: 720px; border: 1px solid #3c4043; border-radius: 24px; padding: 8px 12px; background: #1e1f20; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; }
+  body.light-theme input-area-v2 { background: #f0f4f9; border-color: #dde3ea; }
+  input-area-v2 .file-preview-container:empty { display: none; }
+  .composer-row { display: flex; align-items: flex-end; gap: 8px; }
+  rich-textarea { display: block; flex: 1; }
+  .ql-editor { min-height: 44px; max-height: 120px; overflow: auto; outline: none; white-space: pre-wrap; }
+  .ql-editor.ql-blank::before { content: attr(data-placeholder); color: #9aa0a6; }
+  #send { font: inherit; background: #7cacf8; color: #131314; border: 0; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; }
+  immersive-panel { position: fixed; top: 64px; right: 0; bottom: 0; width: 45vw; background: #1e1f20; border-left: 1px solid #3c4043; padding: 16px; box-sizing: border-box; z-index: 5; }
+  #controls { position: fixed; left: 12px; right: 350px; bottom: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+  #controls button { font: 12px/1.2 inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid #444; background: #262524; color: #e3e3e3; cursor: pointer; }
+  #auto-result { position: fixed; left: 12px; top: 70px; max-width: 60vw; max-height: 70vh; overflow: auto; background: #000c; color: #9f9; font: 11px/1.4 monospace; padding: 8px; z-index: 10; white-space: pre-wrap; }
+  #auto-result:empty { display: none; }
+</style>
+</head>
+<body class="dark-theme">
+<div class="topbar"><b>Gemini</b><span>harness</span><span id="signin-slot"></span></div>
+<chat-window><infinite-scroller id="scroller"></infinite-scroller></chat-window>
+<input-area-v2 id="input-area">
+  <div class="file-preview-container" id="pending"></div>
+  <div class="composer-row">
+    <rich-textarea><div class="ql-editor ql-blank" contenteditable="true" role="textbox" aria-label="Enter a prompt here" data-placeholder="Ask Gemini"></div></rich-textarea>
+    <button id="send" type="button" aria-label="Send message">➤</button>
+  </div>
+</input-area-v2>
+<immersive-panel id="canvas-panel" hidden><b id="canvas-title"></b><p>Canvas contents would be here.</p><button type="button" id="canvas-close">Close</button></immersive-panel>
+<div id="controls">
+  <button type="button" data-act="stream">+ stream reply with code</button>
+  <button type="button" data-act="upload">+ upload notes.txt</button>
+  <button type="button" data-act="canvas">+ Canvas update</button>
+  <button type="button" data-act="image">+ generated image</button>
+  <button type="button" data-act="tasks">tasks 3/4</button>
+  <button type="button" data-act="attach">attach to draft</button>
+  <button type="button" data-act="fill">fill prompt</button>
+  <button type="button" data-act="long">long prompt</button>
+  <button type="button" data-act="theme">light / dark</button>
+  <button type="button" data-act="openCanvas">Canvas panel</button>
+  <button type="button" data-act="route">new chat (route)</button>
+  <button type="button" data-act="signout">sign out / in</button>
+  <button type="button" data-act="check">gtrCheck()</button>
+</div>
+<pre id="auto-result"></pre>
+
+<script>
+'use strict';
+// --- capture what the extension reports, before it loads ---------------------------
+window.__gtrErrors = [];
+for (const k of ['warn', 'error']) {
+  const orig = console[k].bind(console);
+  console[k] = (...a) => { window.__gtrErrors.push(a.map(String).join(' ')); orig(...a); };
+}
+window.addEventListener('error', e => window.__gtrErrors.push('error: ' + e.message));
+
+const params = new URLSearchParams(location.search);
+// Automated runs start from a clean panel state.
+// Automated runs start from a clean panel state, in English whatever the
+// browser's language (the checks below read English texts).
+if (params.has('auto') || params.has('shot')) {
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('gtr:')) localStorage.removeItem(k); } catch {}
+}
+if (params.has('auto')) { try { localStorage.setItem('gtr:lang', 'en'); } catch {} }
+const shot = params.get('shot');
+if (shot) {
+  const set = (k, v) => { try { localStorage.setItem('gtr:' + k, v); } catch {} };
+  if (shot === 'hints' || shot === 'hints-pl') set('tab', 'hints');
+  if (shot === 'context' || shot === 'context-warn') set('tab', 'context');
+  if (shot === 'context-warn') set('plan', 'free');
+  if (shot === 'pl' || shot === 'hints-pl') set('lang', 'pl');
+  if (shot === 'collapsed') set('collapsed', '1');
+  if (shot === 'pl') set('collapsed', '0'); // shot at phone width, where it would start folded
+  if (shot === 'snippets') set('snippets', '1');
+  if (shot !== 'pl' && shot !== 'hints-pl') set('lang', 'en');
+}
+
+// --- building the fake page (no HTML strings) ---------------------------------------
+const $ = s => document.querySelector(s);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function h(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null) continue;
+    if (k === 'class') n.className = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return n;
+}
+
+// What the panel should find: visible text per role, items by path, image sizes.
+const expect = { user: [], model: [], items: new Map(), images: [] };
+function resetExpect() { expect.user = []; expect.model = []; expect.items = new Map(); expect.images = []; }
+const said = (role, s) => { expect[role].push(s); return s; };
+const item = (path, kind) => expect.items.set(path, kind);
+
+function picture(w, hgt, alt, a, b) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = hgt;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, w, hgt);
+  grad.addColorStop(0, a); grad.addColorStop(1, b);
+  g.fillStyle = grad; g.fillRect(0, 0, w, hgt);
+  const shown = Math.min(w, 280);
+  return h('img', { src: c.toDataURL('image/png'), alt, width: shown, height: Math.round(shown * hgt / w) });
+}
+
+function chip(name, img) {
+  return h('uploader-file-preview', {}, img || null, h('span', { class: 'file-name' }, name));
+}
+
+function userTurn(text, chips = []) {
+  return h('user-query', {},
+    h('span', { class: 'cdk-visually-hidden' }, 'You said'),
+    chips.length ? h('div', { class: 'file-preview-container' }, chips) : null,
+    h('div', { class: 'query-text' }, h('p', { class: 'query-text-line' }, said('user', text))));
+}
+
+const THOUGHTS = ('Considering the structure of the report, the reader, the numbers and what to leave out. ').repeat(70);
+
+function modelTurn(...blocks) {
+  return h('model-response', {},
+    h('span', { class: 'cdk-visually-hidden' }, 'Gemini said'),
+    h('model-thoughts', {}, h('button', { type: 'button' }, 'Show thinking'), h('div', { class: 'thoughts-body' }, THOUGHTS)),
+    h('message-content', {}, h('div', { class: 'markdown' }, ...blocks)),
+    h('div', { class: 'response-footer' }, h('button', { type: 'button' }, h('mat-icon', {}, 'thumb_up'))));
+}
+
+const para = (...parts) => h('p', {}, ...parts.map(p => (typeof p === 'string' ? said('model', p) : p)));
+const code = s => h('code', {}, said('model', s));
+
+function codeBlock(lang, text) {
+  said('model', text);
+  return h('code-block', {},
+    h('div', { class: 'code-block-decoration' }, h('span', {}, lang), h('button', { type: 'button' }, h('mat-icon', {}, 'content_copy'), ' Copy code')),
+    h('pre', {}, h('code', { 'data-test-id': 'code-content' }, text)));
+}
+
+function canvasChip(title) {
+  return h('immersive-entry-chip', {}, h('button', { type: 'button', onclick: () => openCanvas(title) }, h('span', { 'data-test-id': 'artifact-text' }, title)));
+}
+
+function generated(w, hgt, alt) {
+  expect.images.push([w, hgt]);
+  return h('generated-image', {}, h('single-image', {}, picture(w, hgt, alt, '#4c8df6', '#9b6cf2')));
+}
+
+const pair = (u, m) => h('div', { class: 'conversation-container' }, u, m);
+const scroller = () => $('#scroller');
+const push = node => { scroller().appendChild(node); $('chat-window').scrollTop = 1e9; };
+
+function buildHistory() {
+  resetExpect();
+  scroller().textContent = '';
+  const thumb = picture(200, 150, 'whiteboard.jpg', '#f6c34c', '#f2786c');
+  expect.images.push([200, 150]);
+  push(pair(
+    userTurn('Summarize the attached report and the whiteboard photo for the team meeting.', [chip('Quarterly_report_Q3.pdf'), chip('whiteboard.jpg', thumb)]),
+    modelTurn(
+      para('Here is a short summary of the report and the photo.'),
+      h('ul', {}, h('li', {}, said('model', 'Revenue grew 12% quarter on quarter.')), h('li', {}, said('model', 'Two hires are planned for Q4.'))),
+      para('Here is the loader, in ', code('src/app.ts'), ':'),
+      codeBlock('TypeScript', 'export function load(path: string) {\n  return fetch(path).then(r => r.json());\n}'),
+      para('A quick check in Python:'),
+      codeBlock('Python', "import os\nprint(os.listdir('.'))"),
+      para('And the same idea in C, using object.Property and v2.1.3 for the version:'),
+      codeBlock('C', '#include <stdio.h>\nint main(void) { return 0; }'),
+      canvasChip('Project brief'),
+      para('Files mentioned in prose only: config.json, README.md, notes/plan.md, user@example.com, https://example.com/a/b.html, onet.pl.'),
+    )));
+  item('uploads/Quarterly_report_Q3.pdf', 'upload');
+  item('uploads/whiteboard.jpg', 'upload');
+  item('code/src/app.ts', 'write');
+  item('code/python · 1', 'snippet');
+  item('code/c · 1', 'snippet');
+  item('canvas/Project brief', 'write');
+
+  push(pair(
+    userTurn('Write a date helper and draw the architecture.'),
+    modelTurn(
+      para('Here it is.'),
+      codeBlock('Python', '# file: lib/format.py\ndef fmt(d):\n    return d.isoformat()'),
+      generated(1024, 1024, 'Generated image'),
+      para('Plan:'),
+      h('div', { id: 'tasks' }, ...taskLines(2)),
+    )));
+  item('code/lib/format.py', 'write');
+  item('images/Generated image', 'image');
+}
+
+function taskLines(done) {
+  return ['Read the report', 'Draft the summary', 'Review with the team', 'Send it out']
+    .map((t, i) => h('p', {}, said('model', (i < done ? '☑ ' : '☐ ') + t)));
+}
+
+// --- actions ------------------------------------------------------------------------------
+
+async function streamTurn(tick = 18) {
+  const p1 = h('p', {});
+  const block = h('code-block', {},
+    h('div', { class: 'code-block-decoration' }, h('span', {}, 'Python'), h('button', { type: 'button' }, h('mat-icon', {}, 'content_copy'), ' Copy code')),
+    h('pre', {}, h('code', { 'data-test-id': 'code-content' })));
+  const md = modelTurn(p1, block);
+  push(pair(userTurn('Add a date parser module.'), md));
+  const typeInto = async (node, text) => {
+    const tn = document.createTextNode('');
+    node.appendChild(tn);
+    for (let i = 0; i < text.length; i += 3) { tn.nodeValue = text.slice(0, i + 3); await wait(tick); }
+  };
+  await typeInto(p1, said('model', 'Sure. Put this in '));
+  p1.appendChild(code('utils/dates.py'));
+  p1.appendChild(document.createTextNode(said('model', ':')));
+  await typeInto(block.querySelector('code'), said('model', 'from datetime import datetime\n\ndef parse(s):\n    return datetime.fromisoformat(s)'));
+  item('code/utils/dates.py', 'write');
+}
+
+function addUpload() {
+  push(pair(userTurn('Here are my notes.', [chip('notes.txt')]), modelTurn(para('Thanks, I read them.'))));
+  item('uploads/notes.txt', 'upload');
+}
+
+function addCanvasTurn() {
+  push(pair(userTurn('Make the brief shorter and start a landing page.'), modelTurn(para('Done. I updated the brief and started the page.'), canvasChip('Project brief'), canvasChip('Landing page'))));
+  item('canvas/Project brief', 'edit');
+  item('canvas/Landing page', 'write');
+}
+
+function addImageTurn() {
+  push(pair(userTurn('One more diagram, please.'), modelTurn(para('Here is a second version.'), generated(1024, 1024, 'Generated image'))));
+  item('images/Generated image (2)', 'image');
+}
+
+function setTasks(done) {
+  const box = $('#tasks');
+  if (!box) return;
+  // The texts change, so the expectation follows: drop the old lines, add the new.
+  const old = new Set([...box.children].map(p => p.textContent));
+  expect.model = expect.model.filter(s => !old.has(s));
+  box.textContent = '';
+  box.append(...taskLines(done));
+}
+
+const editor = () => $('.ql-editor');
+function setDraft(text) {
+  const ed = editor();
+  ed.textContent = text;
+  ed.classList.toggle('ql-blank', !text);
+  ed.dispatchEvent(new Event('input', { bubbles: true }));
+}
+const EN_PROMPT = 'You are a senior data analyst. Summarize the attached report for our board meeting because they only have 5 minutes. Use a table with 3 columns and at most 5 rows. For example: | Metric | Q3 | Change |';
+const LONG_PROMPT = '<document>\n' + 'The quarterly report covers revenue, hiring, churn and the product roadmap in some detail. '.repeat(18) + '\n</document>\n\nBased on the information above, what are the three biggest risks?';
+
+function openCanvas(title) {
+  $('#canvas-title').textContent = title;
+  $('#canvas-panel').hidden = false;
+}
+$('#canvas-close').addEventListener('click', () => { $('#canvas-panel').hidden = true; });
+
+let inputArea = null;
+function signOut() {
+  inputArea = $('#input-area');
+  inputArea.remove();
+  $('#signin-slot').append(h('a', { href: 'https://accounts.google.com/ServiceLogin?continue=https://gemini.google.com', id: 'signin' }, 'Sign in'));
+}
+function signIn() {
+  $('#signin') && $('#signin').remove();
+  if (inputArea) document.body.insertBefore(inputArea, $('#canvas-panel'));
+  inputArea = null;
+}
+
+function newChat(path, withTurn) {
+  history.pushState({}, '', path);
+  resetExpect();
+  scroller().textContent = '';
+  if (withTurn) withTurn();
+}
+
+$('#send').addEventListener('click', () => {
+  const text = editor().innerText.trim();
+  if (!text) return;
+  setDraft('');
+  push(pair(userTurn(text), modelTurn(para('Got it. (This harness does not answer for real.)'))));
+});
+
+$('#controls').addEventListener('click', e => {
+  const act = e.target.closest('button') && e.target.closest('button').dataset.act;
+  if (act === 'stream') streamTurn();
+  if (act === 'upload') addUpload();
+  if (act === 'canvas') addCanvasTurn();
+  if (act === 'image') addImageTurn();
+  if (act === 'tasks') setTasks(3);
+  if (act === 'attach') $('#pending').append(chip('draft-data.csv'));
+  if (act === 'fill') setDraft(EN_PROMPT);
+  if (act === 'long') setDraft(LONG_PROMPT);
+  if (act === 'theme') { document.body.classList.toggle('light-theme'); document.body.classList.toggle('dark-theme'); }
+  if (act === 'openCanvas') { const p = $('#canvas-panel'); if (p.hidden) openCanvas('Project brief'); else p.hidden = true; }
+  if (act === 'route') newChat('/app/harness-' + Date.now(), () => push(pair(userTurn('Start over.'), modelTurn(para('Fresh chat.')))));
+  if (act === 'signout') { if ($('#signin')) signIn(); else signOut(); }
+  if (act === 'check') { const r = gtrCheck(); $('#auto-result').textContent = JSON.stringify(r, null, 2); console.log(r); }
+});
+
+buildHistory();
+
+// --- checking -------------------------------------------------------------------------------
+
+const collapse = s => s.replace(/\s+/g, ' ').trim();
+const tokensOf = parts => Math.ceil(collapse(parts.join(' ')).length / 4);
+const imageTok = ([w, hgt]) => (w <= 384 && hgt <= 384 ? 258 : Math.ceil(w / 768) * Math.ceil(hgt / 768) * 258);
+const near = (a, b) => Math.abs(a - b) <= Math.max(3, b * 0.03);
+
+// In the console: gtrCheck() compares what the panel found with what this page put there.
+window.gtrCheck = function () {
+  const dbg = window.__gtrDebug;
+  if (!dbg) return { pass: false, error: 'extension not loaded' };
+  dbg.collect();
+  const got = new Map(dbg.items.map(i => [i.path, i.kind]));
+  const missing = [...expect.items].filter(([p, k]) => got.get(p) !== k).map(([p, k]) => `${p}: want ${k}, got ${got.get(p) || 'nothing'}`);
+  const falsePositives = [...got.keys()].filter(p => !expect.items.has(p));
+  const s = dbg.stats;
+  const tokens = {
+    user: s.user, expectedUser: tokensOf(expect.user),
+    model: s.model, expectedModel: tokensOf(expect.model),
+    images: s.images, expectedImages: expect.images.reduce((a, x) => a + imageTok(x), 0),
+    total: s.total,
+  };
+  const tokensOk = near(tokens.user, tokens.expectedUser) && near(tokens.model, tokens.expectedModel) && tokens.images === tokens.expectedImages;
+  const rows = [...document.querySelectorAll('#gtr-root .gtr-file')].map(r => r.dataset.path);
+  const errors = window.__gtrErrors.slice();
+  return { pass: !missing.length && !falsePositives.length && tokensOk && !errors.length, missing, falsePositives, tokens, tokensOk, rows, errors };
+};
+
+// --- the automated run: test/harness.html?auto=1 --------------------------------------------
+
+async function auto() {
+  const R = [];
+  const ok = (name, pass, detail) => R.push({ name, pass: !!pass, ...(pass ? {} : { detail }) });
+  const root = () => $('#gtr-root');
+  const tabBtn = id => $(`#gtr-root .gtr-tabbtn[data-tab="${id}"]`);
+  const kindOf = p => (window.__gtrDebug.items.find(i => i.path === p) || {}).kind;
+  const metaOf = k => window.__gtrDebug.meta(k) || {};
+  const rowFor = p => [...document.querySelectorAll('#gtr-root .gtr-file')].find(r => r.dataset.path === p);
+
+  await wait(700);
+  ok('panel is drawn, open, dark', root() && root().style.display !== 'none' && root().dataset.collapsed === '0' && root().dataset.theme === 'dark', root() && { ...root().dataset });
+
+  let c = gtrCheck();
+  ok('history: every item found, no false files, tokens match', c.pass, c);
+  ok('history does not flash', window.__gtrDebug.items.every(i => !metaOf(i.key).lastTs));
+  const visibleWant = [...expect.items.keys()].filter(p => expect.items.get(p) !== 'snippet').sort();
+  ok('tree rows (snippets hidden by default)', JSON.stringify(c.rows.slice().sort()) === JSON.stringify(visibleWant), { rows: c.rows, want: visibleWant });
+  ok('conversation title without the site name', ($('#gtr-root .gtr-title-line') || {}).textContent === 'Quarterly review', ($('#gtr-root .gtr-title-line') || {}).textContent);
+  const prog = $('#gtr-root .gtr-prog');
+  ok('task bar shows 2/4', prog && !prog.hidden && prog.title.startsWith('2/4'), prog && prog.title);
+  ok('meter reads the free plan', /\/ 32k tok/.test($('#gtr-root .gtr-m-main').textContent), $('#gtr-root .gtr-m-main').textContent);
+
+  setTasks(4);
+  await wait(1700); // the task list is re-read at most every 1.5 s
+  window.__gtrDebug.collect();
+  await wait(300);
+  ok('task bar follows the list (4/4)', $('#gtr-root .gtr-prog').title.startsWith('4/4'), $('#gtr-root .gtr-prog').title);
+
+  await wait(3200); // past the history window
+  await streamTurn(4);
+  await wait(900);
+  c = gtrCheck();
+  ok('streamed code block named from the line before it', c.pass && kindOf('code/utils/dates.py') === 'write', c);
+  ok('new item flashes and stays marked', metaOf('f:utils/dates.py').lastTs > 0 && rowFor('code/utils/dates.py') && rowFor('code/utils/dates.py').classList.contains('gtr-recent'));
+
+  addUpload();
+  await wait(800);
+  c = gtrCheck();
+  ok('upload listed, counted as a file not as text', c.pass && window.__gtrDebug.stats.otherFiles === 2, { c, otherFiles: window.__gtrDebug.stats.otherFiles });
+
+  addCanvasTurn();
+  await wait(800);
+  c = gtrCheck();
+  ok('a Canvas that comes back is "changed"', c.pass && kindOf('canvas/Project brief') === 'edit', c);
+
+  addImageTurn();
+  await wait(1000);
+  c = gtrCheck();
+  ok('images counted by tiles (258 + 2 × 1032)', c.pass && c.tokens.images === 258 + 2 * 1032, c.tokens);
+
+  [...document.querySelectorAll('#gtr-root .gtr-opt')][1].click();
+  await wait(400);
+  ok('snippets toggle lists unnamed blocks', !!rowFor('code/python · 1') && !!rowFor('code/c · 1'));
+  [...document.querySelectorAll('#gtr-root .gtr-opt')][1].click();
+  await wait(400);
+
+  rowFor('code/src/app.ts').click();
+  await wait(150);
+  const appBlock = [...document.querySelectorAll('code-block')].find(b => b.textContent.includes('export function load'));
+  ok('a row scrolls to its block, which blinks', appBlock.classList.contains('gtr-jump'));
+
+  rowFor('canvas/Project brief').click();
+  await wait(1400);
+  ok('a Canvas row opens the Canvas', !$('#canvas-panel').hidden && $('#canvas-title').textContent === 'Project brief');
+  ok('the panel steps aside while a Canvas is open', root().dataset.collapsed === '1');
+  $('#canvas-close').click();
+  await wait(1400);
+  ok('and comes back when it closes', root().dataset.collapsed === '0');
+
+  tabBtn('hints').click();
+  await wait(300);
+  setDraft(EN_PROMPT);
+  await wait(400);
+  const states = Object.fromEntries([...document.querySelectorAll('#gtr-root .gtr-check')].map(r => [r.dataset.id, r.dataset.state]));
+  const wantStates = { persona: 'ok', task: 'ok', context: 'ok', format: 'ok', constraints: 'ok', examples: 'ok', delimiters: 'miss', questionLast: 'na', depth: 'miss' };
+  ok('hints tick from the draft', JSON.stringify(states) === JSON.stringify(wantStates), { states, wantStates });
+  ok('word counter', /^\d+ words/.test($('#gtr-root .gtr-words').textContent), $('#gtr-root .gtr-words').textContent);
+  setDraft(LONG_PROMPT);
+  await wait(400);
+  const longStates = Object.fromEntries([...document.querySelectorAll('#gtr-root .gtr-check')].map(r => [r.dataset.id, r.dataset.state]));
+  ok('long draft: question last and delimiters', longStates.questionLast === 'ok' && longStates.delimiters === 'ok', longStates);
+
+  setDraft('');
+  await wait(200);
+  $('#gtr-root .gtr-starter[data-id="explainCode"]').click();
+  await wait(300);
+  ok('a ready-made prompt goes into the box', editor().innerText.includes('Explain step by step what this code does'), editor().innerText.slice(0, 80));
+  setDraft('');
+  await wait(300);
+  const missRow = $('#gtr-root .gtr-check[data-id="delimiters"]');
+  missRow.click();
+  await wait(300);
+  ok('a missing hint inserts its example', editor().innerText.includes('<context>') && missRow.dataset.state === 'ok', missRow.dataset.state);
+  $('#pending').append(chip('draft-data.csv'));
+  setDraft('Make it shorter please and also add more numbers to it');
+  await wait(400);
+  ok('a file waiting in the box counts as context', $('#gtr-root .gtr-check[data-id="context"]').dataset.state === 'ok');
+  $('#pending').textContent = '';
+  setDraft('');
+
+  tabBtn('context').click();
+  await wait(400);
+  const hrows = [...document.querySelectorAll('#gtr-root .gtr-hrow')];
+  ok('page check: every chain matched', hrows.length === 8 && hrows.every(r => r.dataset.ok === '1'), hrows.map(r => r.dataset.concept + ':' + r.dataset.ok + ':' + r.title));
+  ok('breakdown lists images and other files', /Images \(3\)/.test(root().textContent) && /Other files \(2\)/.test(root().textContent));
+  $('#gtr-root .gtr-plan[data-plan="pro"]').click();
+  await wait(300);
+  ok('plan picker changes the window', /\/ 1M tok/.test($('#gtr-root .gtr-m-main').textContent), $('#gtr-root .gtr-m-main').textContent);
+  $('#gtr-root .gtr-plan[data-plan="free"]').click();
+  await wait(300);
+
+  const pick = $('#gtr-root .gtr-lang');
+  pick.value = 'pl';
+  pick.dispatchEvent(new Event('change'));
+  await wait(300);
+  ok('Polish', tabBtn('files').textContent === 'Pliki' && tabBtn('context').textContent === 'Kontekst' && /Co jest liczone/.test(root().textContent), tabBtn('files').textContent);
+  pick.value = 'en';
+  pick.dispatchEvent(new Event('change'));
+  await wait(300);
+
+  document.body.classList.replace('dark-theme', 'light-theme');
+  await wait(1200);
+  ok('light page, light panel', root().dataset.theme === 'light');
+  document.body.classList.replace('light-theme', 'dark-theme');
+  await wait(1200);
+
+  $('#gtr-root .gtr-x').click();
+  await wait(200);
+  ok('× folds the panel to its handle', root().dataset.collapsed === '1' && getComputedStyle($('#gtr-root .gtr-tab')).display !== 'none');
+  $('#gtr-root .gtr-tab').click();
+  await wait(200);
+  ok('the handle opens it again', root().dataset.collapsed === '0');
+  tabBtn('files').click();
+  await wait(300);
+
+  newChat('/app');
+  await wait(1400);
+  ok('a new chat clears the tree', window.__gtrDebug.items.length === 0);
+  await wait(3200);
+  // As in a real new chat: your message first, Gemini's reply a moment later.
+  const box = pair(userTurn('Write a runner.'), null);
+  push(box);
+  await wait(2000);
+  box.appendChild(modelTurn(para('Here:'), codeBlock('Go', '// file: cmd/run.go\npackage main')));
+  item('code/cmd/run.go', 'write');
+  await wait(800);
+  const ts = metaOf('f:cmd/run.go').lastTs;
+  ok('activity in the new chat flashes', ts > 0);
+  history.pushState({}, '', '/app/harness-2');
+  await wait(1400);
+  ok('/app → /app/<id> is the same chat', metaOf('f:cmd/run.go').lastTs === ts);
+  newChat('/app/other', () => {
+    push(pair(userTurn('Old chat.'), modelTurn(para('From history:'), codeBlock('Rust', '// other.rs\nfn main() {}'))));
+    item('code/other.rs', 'write');
+  });
+  await wait(1400);
+  c = gtrCheck();
+  ok('switching to another chat starts over', c.pass && !metaOf('f:other.rs').lastTs, c);
+
+  // A saved chat that takes longer than 3 s to load is still history.
+  newChat('/app/slow');
+  await wait(3600);
+  push(pair(userTurn('Saved question.'), modelTurn(para('Saved answer:'), codeBlock('Python', '# saved/answer.py\nx = 1'))));
+  item('code/saved/answer.py', 'write');
+  await wait(800);
+  c = gtrCheck();
+  ok('a slow-loading saved chat does not flash', c.pass && !metaOf('f:saved/answer.py').lastTs, { c, meta: metaOf('f:saved/answer.py') });
+
+  signOut();
+  await wait(1400);
+  ok('signed out: no panel', root().style.display === 'none');
+  signIn();
+  await wait(1400);
+  ok('signed in again: panel back', root().style.display === '');
+
+  // A deliberate HTML-string write, spelled so the unit file check does not flag
+  // it: on this page it must throw, or the check below proves nothing.
+  let enforced = false;
+  try { document.createElement('div')['inner' + 'HTML'] = '<b>x</b>'; } catch { enforced = true; }
+  ok('Trusted Types is enforced on this page', enforced);
+  ok('no innerHTML-style writes in the panel (Trusted Types is on)',!window.__gtrErrors.some(e => /TrustedHTML|Trusted Types/i.test(e)), window.__gtrErrors);
+  ok('no errors from the extension', window.__gtrErrors.length === 0, window.__gtrErrors);
+
+  const failed = R.filter(r => !r.pass);
+  const out = { pass: failed.length === 0, passed: R.length - failed.length, failed: failed.length, results: R };
+  window.__gtrAuto = out;
+  $('#auto-result').textContent = JSON.stringify(out, null, 1);
+  $('#auto-result').setAttribute('data-done', '1');
+  document.title = out.pass ? `GTR PASS ${out.passed}/${R.length}` : `GTR FAIL ${out.failed}/${R.length}`;
+}
+
+if (params.has('auto')) window.addEventListener('load', () => { auto().catch(err => { $('#auto-result').textContent = 'auto run crashed: ' + err.stack; document.title = 'GTR CRASH'; }); });
+if (shot === 'hints' || shot === 'hints-pl') window.addEventListener('load', () => setTimeout(() => setDraft(shot === 'hints' ? 'You are a senior data analyst. Summarize the attached report for our board meeting because they only have 5 minutes.' : 'Jesteś doświadczonym analitykiem. Przygotuj podsumowanie raportu dla zarządu, bo mają tylko 5 minut.'), 300));
+if (shot === 'files' || shot === 'snippets') window.addEventListener('load', () => setTimeout(() => { addCanvasTurn(); streamTurn(2); }, 3300));
+if (shot === 'context-warn') window.addEventListener('load', () => { for (let i = 0; i < 10; i++) push(pair(userTurn('More, please.'), modelTurn(para('Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(220))))); });
+if (shot === 'light') window.addEventListener('load', () => document.body.classList.replace('dark-theme', 'light-theme'));
+</script>
+<script src="../src/lang-default.js"></script>
+<script src="../src/i18n/base.js"></script>
+<script src="../src/i18n/en.js"></script>
+<script src="../src/i18n/pl.js"></script>
+<script src="../src/limits.js"></script>
+<script src="../src/selectors.js"></script>
+<script src="../src/prompts.js"></script>
+<script src="../src/estimate.js"></script>
+<script src="../src/dom.js"></script>
+<script src="../src/content.js"></script>
+</body>
+</html>

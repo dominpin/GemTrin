@@ -1,0 +1,111 @@
+(() => {
+  // 1 plik, 2-4 pliki, 5+ plików (and 22-24 pliki again, but 12-14 plików).
+  const plural = (n, one, few, many) =>
+    n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many;
+
+  GTR_I18N.pl = {
+    dec: ',',
+    tab_files: 'Pliki', tab_hints: 'Podpowiedzi', tab_context: 'Kontekst',
+    lang: 'Język', grip: 'Przeciągnij, by zmienić szerokość', open: 'Otwórz GemTrin', close: 'Zwiń panel',
+
+    // Licznik
+    meterMain: (k, lim) => `≈ ${k} / ${lim} tok`,
+    meterTitle: 'Szacunek z tekstu widocznego na stronie (ok. 4 znaki na token) wobec okna kontekstu Twojego planu. Kliknij, by zobaczyć szczegóły.',
+    progTitle: (done, total, pct) => `${done}/${total} · ${pct}% (z ostatniej listy zadań w odpowiedziach Gemini)`,
+    plan_free: 'Bez planu', plan_plus: 'AI Plus', plan_pro: 'AI Pro', plan_ultra: 'AI Ultra',
+
+    // Pliki
+    follow: 'podążaj', followTitle: 'Przewijaj drzewko do tego, co Gemini ostatnio dodał albo zmienił',
+    snippets: n => `fragmenty ${n}`, snippetsTitle: 'Pokazuj też bloki kodu, które nie nazywają pliku',
+    count: n => `${n} ${plural(n, 'element', 'elementy', 'elementów')}`,
+    empty: 'Na razie pusto. Tu pojawią się załączone pliki, dokumenty Canvas, bloki kodu z nazwą pliku i obrazy z odpowiedzi.',
+    emptySnippets: n => `Brak plików z nazwą. ${n} ${plural(n, 'blok kodu nie nazywa', 'bloki kodu nie nazywają', 'bloków kodu nie nazywa')} pliku: włącz „fragmenty”, by je zobaczyć.`,
+    grp_uploads: 'Załączone', grp_canvas: 'Canvas', grp_code: 'Kod', grp_images: 'Obrazy',
+    fold: 'Zwiń', unfold: 'Rozwiń',
+    kind_upload: 'załączony przez Ciebie', kind_write: 'utworzony przez Gemini', kind_edit: 'później zmieniony',
+    kind_image: 'obraz w odpowiedzi', kind_snippet: 'blok kodu bez nazwy pliku',
+    turnN: n => `tura ${n}`,
+    openCanvas: 'Kliknij, by otworzyć', scrollTo: 'Kliknij, by do niego przewinąć',
+    imageN: n => `obraz ${n}`, unnamedFile: 'plik', untitledCanvas: 'Dokument bez tytułu',
+
+    // Podpowiedzi
+    lead: 'Pisz prompt w polu wiadomości Gemini. Tu widać, czego mu jeszcze brakuje według wskazówek Google.',
+    words: (n, tok, good) => `${n} ${plural(n, 'słowo', 'słowa', 'słów')} · ≈ ${tok} tok · Google: udane prompty mają średnio ~${good} słów`,
+    wordsNone: good => `Pusty szkic · Google: udane prompty mają średnio ~${good} słów`,
+    checkTitle: 'Kliknij, by wstawić przykład do pola',
+    naTitle: 'Dotyczy tylko długich promptów',
+    note: 'Odhaczenia są zgadywane ze słów w szkicu: to wskazówka, nie ocena.',
+    startersH: 'Gotowe prompty', startersNote: 'Kliknij, a trafi do pola wiadomości; uzupełnij [nawiasy].',
+    principlesH: 'Zasady z dokumentacji Google',
+    sourcesH: 'Źródła:',
+    src_prompting: 'Prompt design strategies', src_longContext: 'Long context', src_workspace: 'Prompting guide 101',
+    inserted: 'wstawiono', copied: 'skopiowano', noBox: 'nie znaleziono pola wiadomości',
+    patterns: {
+      persona: ['Nadaj Gemini rolę', 'Persona to pierwsza z czterech części przewodnika Google: jedno zdanie o tym, kto odpowiada, ustawia ton i poziom szczegółów.', 'Jesteś doświadczonym redaktorem bloga technologicznego.'],
+      task: ['Powiedz wprost, co ma zrobić', 'Rada Google dla Gemini 3: pisz precyzyjnie i bezpośrednio. Zacznij od czasownika i nazwij, czego chcesz.', 'Podsumuj poniższy tekst w pięciu punktach.'],
+      context: ['Dodaj kontekst', 'Napisz, dla kogo to jest i po co, albo dołącz plik. Bez kontekstu Gemini odpowiada ogólnikowo.', 'To na pięciominutowe podsumowanie dla zarządu, który nie zna szczegółów technicznych.'],
+      format: ['Określ formę odpowiedzi', 'Tabela, punkty, JSON, liczba akapitów: nazwij format, a odpowiedź od razu się przyda.', 'Odpowiedz tabelą z kolumnami: problem, przyczyna, rozwiązanie.'],
+      constraints: ['Postaw granice', 'Napisz, czego unikać i jak długa może być odpowiedź. Wyraźne ograniczenia to część zaleceń Google.', 'Zmieść się w 150 słowach i nie używaj żargonu.'],
+      examples: ['Pokaż przykład', 'Google zaleca, by zawsze dawać przykłady (few-shot): różne, ale wszystkie w jednym, spójnym formacie.', 'Na przykład:\nWejście: "paczka przyszła po terminie" → Kategoria: wysyłka'],
+      delimiters: ['Rozdziel części promptu', 'Ujmij polecenie, kontekst i dane w znaczniki XML albo nagłówki Markdown. Wybierz jeden styl i ich nie mieszaj.', '<kontekst>\n[wklej materiał]\n</kontekst>\n<zadanie>\n[co z nim zrobić]\n</zadanie>'],
+      questionLast: ['Pytanie na końcu', 'Przy długich promptach Google radzi: najpierw cały kontekst, na końcu pytanie, zaczynając od „Na podstawie powyższych informacji…”.', 'Na podstawie powyższych informacji '],
+      depth: ['Powiedz, jak szczegółowo', 'Gemini 3 domyślnie odpowiada zwięźle. Poproś o szczegóły, kroki albo konkretny ton, jeśli ich potrzebujesz.', 'Wyjaśnij to szczegółowo, krok po kroku, przystępnym tonem.'],
+    },
+    starters: {
+      summarizePdf: ['Streść załączony PDF', 'Jesteś analitykiem, który przygotowuje notatkę dla zapracowanego kierownika. Streść załączony PDF w 5 punktach, a potem wypisz 3 otwarte pytania, które zostawia. Pisz prostym językiem, każdy punkt poniżej 25 słów.'],
+      compareDocs: ['Porównaj dokumenty w tabeli', 'Porównaj załączone dokumenty w tabeli z kolumnami: temat, dokument A, dokument B, najważniejsza różnica. Pod tabelą w dwóch zdaniach poleć, który lepiej pasuje do małego zespołu, i uzasadnij dlaczego.'],
+      researchBrief: ['Zlecenie dla Deep Research', 'Potrzebuję raportu badawczego na temat [temat] dla [odbiorcy]. Opisz obecny stan wiedzy i główne spory, a dla każdej tezy podaj 3 wiarygodne źródła. Format: nagłówki, krótkie akapity, lista źródeł na końcu.'],
+      canvasDraft: ['Szkic w Canvas', 'Otwórz Canvas i napisz jednostronicowy [rodzaj dokumentu] na temat [temat] dla [odbiorcy]. Użyj nagłówków, zmieść się w 400 słowach i zostaw [nawiasy] tam, gdzie potrzebujesz ode mnie faktów.'],
+      explainCode: ['Wyjaśnij kod', 'Wyjaśnij krok po kroku, co robi ten kod, osobie, która dopiero dołącza do projektu. Potem wypisz w punktach możliwe błędy i przypadki brzegowe. Jeśli czegoś nie da się ustalić z kodu, napisz to zamiast zgadywać.\n\n```\n[wklej kod]\n```'],
+      rewriteEmail: ['Przeredaguj e-mail', 'Przeredaguj poniższy e-mail tak, żeby był uprzejmy, ale stanowczy, miał mniej niż 120 słów i nie zmieniał żadnych dat ani liczb.\n\n<email>\n[wklej e-mail]\n</email>'],
+      longDoc: ['Długi dokument, pytanie na końcu', '<dokument>\n[wklej długi tekst]\n</dokument>\n\nNa podstawie powyższego dokumentu odpowiedz: [Twoje pytanie]. Zacytuj fragmenty, na których się opierasz.'],
+    },
+    principles: [
+      ['Precyzyjnie i wprost', 'Nazwij cel jasno i zwięźle. Gemini 3 najlepiej reaguje na bezpośrednie polecenia.'],
+      ['Persona · Zadanie · Kontekst · Format', 'Cztery części z przewodnika Google. Rzadko potrzeba wszystkich czterech; wystarczy zwykły, naturalny język.'],
+      ['Przykład lepszy niż opis', 'Przykłady (few-shot) pokazują format i ton. Niech będą różne, ale sformatowane tak samo.'],
+      ['Jedna struktura', 'Znaczniki XML albo nagłówki Markdown, konsekwentnie. Zdefiniuj pojęcia, które można zrozumieć na dwa sposoby.'],
+      ['Najpierw kontekst, pytanie na końcu', 'Długi materiał wklej najpierw, a pytanie zadaj na końcu, po „Na podstawie powyższych informacji…”.'],
+      ['O szczegóły proś wprost', 'Gemini 3 domyślnie odpowiada zwięźle. Jeśli chcesz dłuższej albo swobodniejszej odpowiedzi, napisz to.'],
+      ['Dziel na kroki', 'Złożone zadanie rozbij na etapy i wysyłaj je jako osobne prompty, przekazując każdą odpowiedź do następnego.'],
+      ['Poprawiaj', 'Gdy odpowiedź chybia, przeformułuj prompt, zmień kolejność jego części albo zamień pytanie na wybór z kilku opcji.'],
+      ['Nie trzeba prosić o tok rozumowania', 'Modele z myśleniem rozumują same; prośba o rozpisanie każdego kroku głównie wydłuża odpowiedź.'],
+    ],
+
+    // Kontekst
+    planH: 'Twój plan',
+    planNote: 'Okna kontekstu, które Google podaje dla aplikacji Gemini. Strona nie pokazuje Twojego planu, więc wybierz go tutaj.',
+    usageOf: (lim, pct) => `z ${lim} tokenów · ${pct}`,
+    tipWarn: 'Zajęta ponad połowa okna. Długi materiał wklejaj przed pytaniem, a kolejne pytania pisz krótko.',
+    tipDanger: 'Blisko limitu Gemini może gubić wcześniejsze części rozmowy. Rozważ poproszenie o podsumowanie i dalszą rozmowę w nowym czacie.',
+    tipOver: 'Szacunek przekracza okno Twojego planu: Gemini może już nie widzieć najwcześniejszych części rozmowy. Najbezpieczniej przenieść podsumowanie do nowego czatu.',
+    breakdownH: 'Co jest liczone',
+    ctxYou: n => `Twoje wiadomości (${n})`,
+    ctxGemini: n => `Odpowiedzi Gemini (${n})`,
+    ctxImages: n => `Obrazy (${n})`,
+    ctxFiles: n => `Inne pliki (${n})`,
+    notCounted: 'nieliczone',
+    ctxTotal: 'Razem',
+    ctxDraft: 'Szkic w polu',
+    ctxWords: (lo, hi) => `Tekst to mniej więcej ${lo}–${hi} słów angielskich.`,
+    ctxBiggest: n => `Najdłuższa odpowiedź (tura ${n})`,
+    ctxNotes: [
+      'Tekst: ok. 4 znaki na token, przelicznik Google dla Gemini. Języki inne niż angielski często zużywają więcej tokenów.',
+      'Liczą się tylko tury wczytane na stronie. W długiej rozmowie przewiń w górę, by wczytać starsze.',
+      'Nieliczone: zawartość plików (PDF, dokumenty, audio, wideo), ukryte myślenie Gemini, zawartość Canvas, instrukcje Gemów.',
+      'Obrazy: 258 tokenów każdy, więcej dla dużych (kafelki 768 px). Przez miniatury to dolna granica.',
+    ],
+    healthH: (u, m) => `Kontrola strony · znaleziono ${u} + ${m} tur`,
+    healthNote: 'Który selektor zadziałał na tej stronie. „brak na stronie” jest normalny, gdy w rozmowie nie ma takiego elementu. Jeśli nie znaleziono żadnych tur, strona Gemini się zmieniła i trzeba poprawić src/selectors.js.',
+    h_transcript: 'Rozmowa', h_userTurn: 'Twoje wiadomości', h_modelTurn: 'Odpowiedzi Gemini', h_composer: 'Pole wiadomości',
+    h_uploadChip: 'Załączone pliki', h_canvasChip: 'Kafelki Canvas', h_codeBlock: 'Bloki kodu', h_generatedImage: 'Obrazy',
+    notSeen: 'brak na stronie',
+    refH: 'Skąd te liczby',
+    refPlans: 'Okna kontekstu w aplikacji Gemini: bez planu 32k, AI Plus 128k, AI Pro i AI Ultra 1M tokenów.',
+    refApi: (i, o) => `Dla porównania Gemini API (modele Gemini 3 i 2.5): ${i} tokenów wejścia i ${o} tokenów wyjścia.`,
+    refRatio: 'Token to ok. 4 znaki; 100 tokenów to ok. 60–80 słów angielskich.',
+    refChecked: d => `Sprawdzono ${d}.`,
+    src_plans: 'Limity aplikacji Gemini', src_tokens: 'Understand and count tokens',
+  };
+  GTR_LANG_NAMES.pl = 'Polski';
+})();
