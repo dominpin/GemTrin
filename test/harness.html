@@ -478,14 +478,43 @@ async function auto() {
   $('#gtr-root .gtr-plan[data-plan="free"]').click();
   await wait(300);
 
+  // All five languages: the dropdown lists them in order, every one switches the
+  // panel on all three tabs without an undefined / NaN / [object] string, and the
+  // choice is kept in localStorage ('gtr:lang') and in the panel's own state.
   const pick = $('#gtr-root .gtr-lang');
-  pick.value = 'pl';
-  pick.dispatchEvent(new Event('change'));
-  await wait(300);
-  ok('Polish', tabBtn('files').textContent === 'Pliki' && tabBtn('context').textContent === 'Kontekst' && /Co jest liczone/.test(root().textContent), tabBtn('files').textContent);
+  const LANG_CASES = [
+    ['pl', 'Polski', 'Pliki', 'Kontekst', /Co jest liczone/],
+    ['en', 'English', 'Files', 'Context', /What is counted/i],
+    ['csb', 'Kaszëbsczi', 'Plikù', 'Kòntekst', /Co jest liczone/],
+    ['szl', 'Ślōnski', 'Pliki', 'Kōntekst', /Co jest liczone/],
+    ['gor', 'Gôrolsko', 'Pliki', 'Kontekst', /Co jest liczone/],
+  ];
+  ok('dropdown lists all 5 languages in order', pick && [...pick.options].map(o => o.value + ':' + o.textContent).join('|') === LANG_CASES.map(c => c[0] + ':' + c[1]).join('|'), pick && [...pick.options].map(o => o.value + ':' + o.textContent).join('|'));
+  const stored = () => { try { return localStorage.getItem('gtr:lang'); } catch { return 'blocked'; } };
+  for (const [code, name, filesLabel, ctxLabel, countedRe] of LANG_CASES) {
+    pick.value = code;
+    pick.dispatchEvent(new Event('change'));
+    await wait(300);
+    ok(`${name}: tab labels`, tabBtn('files').textContent === filesLabel && tabBtn('context').textContent === ctxLabel, tabBtn('files').textContent + ' / ' + tabBtn('context').textContent);
+    ok(`${name}: choice kept in localStorage and panel state`, stored() === code && window.__gtrDebug.state.lang === code && pick.value === code, stored() + ' / ' + window.__gtrDebug.state.lang);
+    ok(`${name}: <html> panel lang attribute`, root().getAttribute('lang') === code, root().getAttribute('lang'));
+    let all = '';
+    for (const tab of ['files', 'hints', 'context']) {
+      tabBtn(tab).click();
+      await wait(250);
+      all += '\n' + root().textContent + '\n' + [...root().querySelectorAll('[title]')].map(e => e.title).join('\n');
+    }
+    if (code !== 'en') ok(`${name}: context tab translated`, countedRe.test(all) || /Co jest liczone|Skąd te liczby|Skŏd te liczby/.test(all), all.slice(0, 200));
+    const bad = all.match(/undefined|\[object|NaN|\bnull\b/);
+    ok(`${name}: no undefined / NaN / [object] strings`, !bad, bad && all.slice(Math.max(0, bad.index - 40), bad.index + 40));
+  }
+  // A new page load restores the saved choice: the harness clears storage only for ?auto, so check the stored code is a real one.
+  ok('stored language is one of the 5', LANG_CASES.some(c => c[0] === stored()), stored());
+  tabBtn('files').click();
   pick.value = 'en';
   pick.dispatchEvent(new Event('change'));
   await wait(300);
+  ok('back to English, storage follows', stored() === 'en' && tabBtn('files').textContent === 'Files', stored());
 
   document.body.classList.replace('dark-theme', 'light-theme');
   await wait(1200);
@@ -568,6 +597,9 @@ if (shot === 'light') window.addEventListener('load', () => document.body.classL
 <script src="../src/i18n/base.js"></script>
 <script src="../src/i18n/en.js"></script>
 <script src="../src/i18n/pl.js"></script>
+<script src="../src/i18n/csb.js"></script>
+<script src="../src/i18n/szl.js"></script>
+<script src="../src/i18n/gor.js"></script>
 <script src="../src/limits.js"></script>
 <script src="../src/selectors.js"></script>
 <script src="../src/prompts.js"></script>

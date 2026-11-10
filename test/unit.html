@@ -21,6 +21,9 @@
 <script src="../src/i18n/base.js"></script>
 <script src="../src/i18n/en.js"></script>
 <script src="../src/i18n/pl.js"></script>
+<script src="../src/i18n/csb.js"></script>
+<script src="../src/i18n/szl.js"></script>
+<script src="../src/i18n/gor.js"></script>
 <script src="../src/limits.js"></script>
 <script src="../src/selectors.js"></script>
 <script src="../src/prompts.js"></script>
@@ -183,7 +186,7 @@ yes('every chain is a non-empty list', Object.values(GTR_SEL).every(v => Array.i
       eq('runs on gemini.google.com only', manifest.content_scripts[0].matches, ['https://gemini.google.com/*']);
       eq('gecko id', manifest.browser_specific_settings.gecko.id, 'gemtrin@dominpin');
       const scripts = manifest.content_scripts[0].js;
-      const order = ['src/lang-default.js', 'src/i18n/base.js', 'src/i18n/en.js', 'src/i18n/pl.js', 'src/limits.js', 'src/selectors.js', 'src/prompts.js', 'src/estimate.js', 'src/dom.js', 'src/content.js'];
+      const order = ['src/lang-default.js', 'src/i18n/base.js', 'src/i18n/en.js', 'src/i18n/pl.js', 'src/i18n/csb.js', 'src/i18n/szl.js', 'src/i18n/gor.js', 'src/limits.js', 'src/selectors.js', 'src/prompts.js', 'src/estimate.js', 'src/dom.js', 'src/content.js'];
       eq('script order', scripts, order);
       const files = [...scripts, ...manifest.content_scripts[0].css, ...Object.values(manifest.icons), '_locales/en/messages.json', '_locales/pl/messages.json'];
       for (const f of files) {

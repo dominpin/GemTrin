@@ -67,17 +67,18 @@
 
   // The languages this build ships, and the one in use: the reader's choice,
   // else the build's default, else the browser's.
-  const LANGS = ['en', 'pl'].filter(c => I18N[c]);
+  const LANGS = (globalThis.GTR_LANG_ORDER || ['en', 'pl']).filter(c => I18N[c]);
+  const FALLBACK = LANGS.includes('en') ? 'en' : LANGS[0]; // the language a missing text is taken from
   const langOk = v => LANGS.includes(v);
   let lang = (() => {
     if (LANGS.length === 1) return LANGS[0];
     const saved = load('lang', '');
     if (langOk(saved)) return saved;
     if (langOk(globalThis.GTR_DEFAULT_LANG)) return globalThis.GTR_DEFAULT_LANG;
-    return /^pl/i.test(navigator.language || '') && langOk('pl') ? 'pl' : langOk('en') ? 'en' : LANGS[0];
+    return LANGS.find(c => c !== 'en' && new RegExp('^' + c + '(-|$)', 'i').test(navigator.language || '')) || FALLBACK;
   })();
   const t = (k, ...a) => {
-    const v = (I18N[lang] || {})[k] ?? (I18N[LANGS[0]] || {})[k];
+    const v = (I18N[lang] || {})[k] ?? (I18N[FALLBACK] || {})[k];
     return typeof v === 'function' ? v(...a) : v ?? k;
   };
   const fmt = n => E.fmtTokens(n, t('dec'));
